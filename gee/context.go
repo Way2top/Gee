@@ -11,9 +11,10 @@ type H map[string]interface{}
 type Context struct {
 	Writer     http.ResponseWriter
 	Req        *http.Request
-	Path       string // 请求资源路径
-	Method     string // 请求方式
-	StatusCode int    // 状态码
+	Path       string            // 请求资源路径
+	Method     string            // 请求方式
+	Params     map[string]string // 提供对路由参数的访问（router.go 中的 getRoute 返回的 params 就存储在这里）
+	StatusCode int               // 状态码
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -74,4 +75,10 @@ func (c *Context) HTML(code int, html string) {
 	c.SetHeader("Content-Type", "text/html")
 	c.Status(code)
 	c.Writer.Write([]byte(html))
+}
+
+// Param 可以取出 Context 中的 Params 的值，传入对应的 key 返回 Params[key]
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }
