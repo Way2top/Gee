@@ -61,7 +61,7 @@ func (n *node) search(parts []string, height int) *node {
 		return n
 	}
 
-	// 如果 pattern 还没走完6
+	// 如果 pattern 还没走完
 	part := parts[height]
 	// 匹配所有匹配的节点并返回给 children
 	children := n.matchChildren(part)
