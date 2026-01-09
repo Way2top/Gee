@@ -36,7 +36,7 @@ func parsePattern(pattern string) []string {
 			// 假设这里遇到了 * 并且不 break，会发生什么？比如设计了 /static/*filepath/abc
 			// 如果不 break，会得到 ["static", "*filepath", "abc"]
 			// 那么当一个真实的请求来了的时候，例如 /static/css/main.css
-			// 你希望 *filepath = "css/main/css"
+			// 你希望 *filepath = "css/main.css"
 			// 但是如果 Trie 里还有一层 "abc"，那意味着你既让 *filepath 吃掉剩余所有路径，又要求后面必须再匹配 "abc"，这在语义上是自相矛盾的
 			// 一句话总结就是，* 不是模糊匹配一个节点，而是终止 Trie 深度的兜底规则
 			// : 和 * 是不同的，: 是吃一段，* 是吃剩下所有段
@@ -61,7 +61,7 @@ func (r *router) addRoute(method string, pattern string, handler HandlerFunc) {
 	r.handlers[key] = handler
 }
 
-// getRoute 输入请求方式和路径，返回匹配到的路由节点及 params
+// getRoute 输入请求方式和路径，返回匹配到的路由节点及 params（该方法在handler方法中被调用）
 func (r *router) getRoute(method string, path string) (*node, map[string]string) {
 	// 资源路径 pattern 被拆分为 parts（例如，"/p/:lang/doc" → ["p", ":lang", "doc"]）
 	searchParts := parsePattern(path)
@@ -109,8 +109,12 @@ func (r *router) handle(c *Context) {
 	if n != nil {
 		c.Params = params
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		//r.handlers[key](c)
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 NOT FOUND: &s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 NOT FOUND: &s\n", c.Path)
+		})
 	}
+	c.Next()
 }

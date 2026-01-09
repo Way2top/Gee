@@ -15,6 +15,9 @@ type Context struct {
 	Method     string            // 请求方式
 	Params     map[string]string // 提供对路由参数的访问（router.go 中的 getRoute 返回的 params 就存储在这里）
 	StatusCode int               // 状态码
+	// 用于中间件
+	handlers []HandlerFunc
+	index    int // 用于控制中间件的执行顺序
 }
 
 func newContext(w http.ResponseWriter, req *http.Request) *Context {
@@ -23,6 +26,16 @@ func newContext(w http.ResponseWriter, req *http.Request) *Context {
 		Req:    req,
 		Path:   req.URL.Path,
 		Method: req.Method,
+		index:  -1,
+	}
+}
+
+// Next 用于控制中间件的执行顺序，调用后会将控制权交给下一个中间件
+func (c *Context) Next() {
+	c.index++
+	s := len(c.handlers)
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
 	}
 }
 

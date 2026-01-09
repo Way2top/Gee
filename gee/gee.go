@@ -3,6 +3,7 @@ package gee
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
 // HandlerFunc 定义了Gee框架使用的请求处理函数类型
@@ -65,7 +66,21 @@ func (engine *Engine) Run(addr string) (err error) {
 	return http.ListenAndServe(addr, engine)
 }
 
+// Use 是用来将中间件添加到 group 的 middlewares[] 中的，group.middlewares[] 用于存储该路由分组下可能用到的中间件，而 Context.handlers[] 则存放实际需要用到的中间件，这是二者的区别所在
+func (group *RouterGroup) Use(middlewares ...HandlerFunc) {
+	group.middlewares = append(group.middlewares, middlewares...)
+}
+
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// 这部分逻辑用于判断传入的路径所属的 group 包含哪些中间件
+	var middlewares []HandlerFunc
+	for _, group := range engine.groups {
+		// 如果传入路径包含某个 group 的 prefix（前缀），说明传入的路径属于这个 group，那么这个 group 所包含的全部的中间件就都需要应用于该请求路径
+		if strings.HasPrefix(req.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	c := newContext(w, req)
+	c.handlers = middlewares // 前面 for 循环找出了该请求路径下需要的全部中间件 middlewares，把这个加入到 Context.handlers，之后就可以根据 Context.handlers 来执行具体的中间件了
 	engine.router.handle(c)
 }
