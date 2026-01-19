@@ -1,4 +1,4 @@
-module Gee
+module example.com/geeapp
 
 go 1.24
 
